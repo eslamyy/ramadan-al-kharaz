@@ -5,7 +5,7 @@ on:
   push:
     branches: [ "main" ]
     paths:
-      - "ramadan_android_project.zip"
+      - "ramadan_android_project_ui_v2.zip"
       - ".github/workflows/build-apk.yml"
 
 jobs:
@@ -36,7 +36,7 @@ jobs:
         run: |
           rm -rf android-build
           mkdir android-build
-          unzip -q ramadan_android_project.zip -d android-build
+          unzip -q ramadan_android_project_ui_v2.zip -d android-build
 
       - name: Build debug APK
         run: gradle -p android-build :app:assembleDebug --stacktrace
