@@ -28,17 +28,36 @@ jobs:
           rm -rf android-build
           mkdir android-build
           unzip -q ramadan_android_project_inventory_v3.zip -d android-build
+          echo "Project contents:"
+          find android-build -maxdepth 4 -type f | head -100
 
-      - name: Make Gradle executable
-        run: chmod +x android-build/gradlew
-
-      - name: Build APK
+      - name: Find and build Android project
         run: |
-          cd android-build
+          GRADLEW=$(find android-build -type f -name gradlew | head -1)
+
+          if [ -z "$GRADLEW" ]; then
+            echo "ERROR: gradlew not found"
+            find android-build -maxdepth 5 -type f
+            exit 1
+          fi
+
+          echo "Found Gradle wrapper at: $GRADLEW"
+
+          PROJECT_DIR=$(dirname "$GRADLEW")
+          chmod +x "$GRADLEW"
+
+          cd "$PROJECT_DIR"
           ./gradlew :app:assembleDebug --stacktrace
+
+      - name: Find APK
+        run: |
+          echo "Generated APK files:"
+          find android-build -type f -name "*.apk"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Ramadan-Al-Kharaz-APK
-          path: android-build/app/build/outputs/apk/debug/app-debug.apk
+          path: |
+            android-build/**/*.apk
+          if-no-files-found: error
