@@ -1,11 +1,12 @@
-name: Build Android APK
+name: Build Ramadan Al Kharaz APK
 
 on:
   workflow_dispatch:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
     paths:
-      - "- "ramadan_android_project_final_ui.zip""
+      - "ramadan_android_project_final_ui.zip"
       - ".github/workflows/build-apk.yml"
 
 jobs:
@@ -35,6 +36,17 @@ jobs:
       - name: Extract Android project
         run: |
           rm -rf android-build
+          mkdir android-build
+          unzip -q ramadan_android_project_final_ui.zip -d android-build
+
+      - name: Build debug APK
+        run: gradle -p android-build :app:assembleDebug --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ramadan-Al-Kharaz-Final-APK
+          path: android-build/app/build/outputs/apk/debug/app-debug.apk          rm -rf android-build
           mkdir android-build
           unzip -q ramadan_android_project_ui_v2.zip -d android-build
 
