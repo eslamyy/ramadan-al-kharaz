@@ -5,7 +5,7 @@ on:
   push:
     branches: [ "main" ]
     paths:
-      - "ramadan_al_kharaz_professional_v2.zip"
+      - ramadan_al_kharaz_professional_v3.zip
       - ".github/workflows/build-clean.yml"
 
 jobs:
