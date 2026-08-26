@@ -5,7 +5,7 @@ on:
   push:
     branches: [ "main" ]
     paths:
-      - "ramadan_android_project_ui_v2.zip"
+      - "ramadan_android_project_inventory_v3.zip"
       - ".github/workflows/build-apk.yml"
 
 jobs:
