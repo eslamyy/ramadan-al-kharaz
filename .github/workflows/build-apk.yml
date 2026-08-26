@@ -3,7 +3,8 @@ name: Build Android APK
 on:
   workflow_dispatch:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
     paths:
       - "ramadan_android_project_inventory_v3.zip"
       - ".github/workflows/build-apk.yml"
@@ -22,24 +23,19 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Python 3.13
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: "8.11.1"
-
       - name: Extract Android project
         run: |
           rm -rf android-build
           mkdir android-build
-          unzip -q ramadan_android_project_final_ui.zip -d android-build
+          unzip -q ramadan_android_project_inventory_v3.zip -d android-build
 
-      - name: Build debug APK
-        run: gradle -p android-build :app:assembleDebug --stacktrace
+      - name: Make Gradle executable
+        run: chmod +x android-build/gradlew
+
+      - name: Build APK
+        run: |
+          cd android-build
+          ./gradlew :app:assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
