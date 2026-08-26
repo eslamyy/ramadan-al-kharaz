@@ -1,0 +1,47 @@
+name: Build Ramadan Al Kharaz APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "ramadan_android_project_final_ui.zip"
+      - ".github/workflows/build-apk.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Extract Android project
+        run: |
+          rm -rf android-build
+          mkdir android-build
+          unzip -q ramadan_android_project_final_ui.zip -d android-build
+
+      - name: Build debug APK
+        run: gradle -p android-build :app:assembleDebug --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ramadan-Al-Kharaz-Final-APK
+          path: android-build/app/build/outputs/apk/debug/app-debug.apk
