@@ -1,0 +1,46 @@
+name: Build V18 ZIP APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "Ramadan_Al_Kharaz_V18_READY.zip"
+      - ".github/workflows/build-v18-zip.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Extract V18
+        run: |
+          rm -rf v18-build
+          mkdir v18-build
+          unzip -q Ramadan_Al_Kharaz_V18_READY.zip -d v18-build
+          ls -la v18-build/Ramadan_Al_Kharaz_V18
+
+      - name: Build V18 APK
+        run: |
+          gradle -p v18-build/Ramadan_Al_Kharaz_V18 :app:assembleDebug --stacktrace
+
+      - name: Upload V18 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ramadan-Al-Kharaz-V18-APK
+          path: v18-build/Ramadan_Al_Kharaz_V18/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
