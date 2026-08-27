@@ -5,7 +5,7 @@ on:
   push:
     branches: [ "main" ]
     paths:
-      - "ramadan_al_kharaz_professional_v17.zip"
+      - "ramadan_al_kharaz_professional_v17_fixed.zip"
       - ".github/workflows/build-v17.yml"
 
 jobs:
@@ -31,7 +31,7 @@ jobs:
         run: |
           rm -rf clean-build
           mkdir clean-build
-          unzip -q ramadan_al_kharaz_professional_v17.zip -d clean-build
+          unzip -q ramadan_al_kharaz_professional_v17_fixed.zip -d clean-build
 
       - name: Build APK
         run: |
