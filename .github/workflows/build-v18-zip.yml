@@ -1,11 +1,12 @@
-name: Build V18 ZIP APK
+name: Build V18 Updated APK
 
 on:
   workflow_dispatch:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
     paths:
-      - "Ramadan_Al_Kharaz_V18_READY.zip"
+      - "Ramadan_Al_Kharaz_V18_UPDATED.zip"
       - ".github/workflows/build-v18-zip.yml"
 
 jobs:
@@ -27,20 +28,12 @@ jobs:
         with:
           gradle-version: "8.11.1"
 
-      - name: Extract V18
+      - name: Extract V18 Updated project
         run: |
           rm -rf v18-build
           mkdir v18-build
-          unzip -q Ramadan_Al_Kharaz_V18_READY.zip -d v18-build
-          ls -la v18-build/Ramadan_Al_Kharaz_V18
+          unzip -q Ramadan_Al_Kharaz_V18_UPDATED.zip -d v18-build
 
-      - name: Build V18 APK
+      - name: Find Android project
         run: |
-          gradle -p v18-build/Ramadan_Al_Kharaz_V18 :app:assembleDebug --stacktrace
-
-      - name: Upload V18 APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: Ramadan-Al-Kharaz-V18-APK
-          path: v18-build/Ramadan_Al_Kharaz_V18/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
+          echo "Searching for settings
