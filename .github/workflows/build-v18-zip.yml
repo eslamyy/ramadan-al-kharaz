@@ -33,7 +33,16 @@ jobs:
           rm -rf v18-build
           mkdir v18-build
           unzip -q Ramadan_Al_Kharaz_V18_UPDATED.zip -d v18-build
+          ls -la v18-build
+          ls -la v18-build/Ramadan_Al_Kharaz_V18
 
-      - name: Find Android project
+      - name: Build V18 Updated APK
         run: |
-          echo "Searching for settings
+          gradle -p v18-build/Ramadan_Al_Kharaz_V18 :app:assembleDebug --stacktrace
+
+      - name: Upload V18 Updated APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ramadan-Al-Kharaz-V18-Updated-APK
+          path: v18-build/Ramadan_Al_Kharaz_V18/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
