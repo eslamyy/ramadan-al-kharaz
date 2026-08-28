@@ -1,4 +1,4 @@
-name: Build V18.2 A4 Final APK
+name: Build V18.3 Final Invoice APK
 
 on:
   workflow_dispatch:
@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - "Ramadan_Al_Kharaz_V18_A4_FINAL.zip"
+      - "Ramadan_Al_Kharaz_V18_FINAL_INVOICE.zip"
       - ".github/workflows/build-v18-zip.yml"
 
 jobs:
@@ -28,13 +28,12 @@ jobs:
         with:
           gradle-version: "8.11.1"
 
-      - name: Extract V18.2 project
+      - name: Extract V18.3 project
         run: |
           rm -rf v18-build
           mkdir v18-build
-          unzip -q Ramadan_Al_Kharaz_V18_A4_FINAL.zip -d v18-build
-          echo "Extracted files:"
-          find v18-build -maxdepth 3 -type f -name "settings.gradle" -print
+          unzip -q Ramadan_Al_Kharaz_V18_FINAL_INVOICE.zip -d v18-build
+          echo "Project extracted successfully"
 
       - name: Detect Android project
         shell: bash
@@ -51,7 +50,7 @@ jobs:
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
           echo "Android project found at: $PROJECT_DIR"
 
-      - name: Build V18.2 APK
+      - name: Build V18.3 APK
         run: |
           gradle -p "$PROJECT_DIR" :app:assembleDebug --stacktrace
 
@@ -59,10 +58,10 @@ jobs:
         run: |
           find "$PROJECT_DIR" -type f -name "*.apk" -print
 
-      - name: Upload V18.2 APK
+      - name: Upload V18.3 APK
         uses: actions/upload-artifact@v4
         with:
-          name: Ramadan-Al-Kharaz-V18.2-A4-APK
+          name: Ramadan-Al-Kharaz-V18.3-Final-APK
           path: |
             ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
