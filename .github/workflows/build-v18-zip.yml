@@ -33,15 +33,36 @@ jobs:
           rm -rf v18-build
           mkdir v18-build
           unzip -q Ramadan_Al_Kharaz_V18_A4_FINAL.zip -d v18-build
-          ls -la v18-build
+          echo "Extracted files:"
+          find v18-build -maxdepth 3 -type f -name "settings.gradle" -print
+
+      - name: Detect Android project
+        shell: bash
+        run: |
+          SETTINGS_FILE=$(find v18-build -type f -name "settings.gradle" | head -n 1)
+
+          if [ -z "$SETTINGS_FILE" ]; then
+            echo "ERROR: settings.gradle not found"
+            exit 1
+          fi
+
+          PROJECT_DIR=$(dirname "$SETTINGS_FILE")
+
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "Android project found at: $PROJECT_DIR"
 
       - name: Build V18.2 APK
         run: |
-          gradle -p v18-build/Ramadan_Al_Kharaz_V18_UPDATED :app:assembleDebug --stacktrace
+          gradle -p "$PROJECT_DIR" :app:assembleDebug --stacktrace
+
+      - name: Find generated APK
+        run: |
+          find "$PROJECT_DIR" -type f -name "*.apk" -print
 
       - name: Upload V18.2 APK
         uses: actions/upload-artifact@v4
         with:
           name: Ramadan-Al-Kharaz-V18.2-A4-APK
-          path: v18-build/Ramadan_Al_Kharaz_V18_UPDATED/app/build/outputs/apk/debug/app-debug.apk
+          path: |
+            ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
