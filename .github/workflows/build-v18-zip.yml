@@ -1,4 +1,4 @@
-name: Build V18.4 Logos Fixed APK
+name: Build V18.5 Final Approved APK
 
 on:
   workflow_dispatch:
@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - "Ramadan_Al_Kharaz_V18_4_LOGOS_FIXED.zip"
+      - "Ramadan_Al_Kharaz_V18_5_FINAL_APPROVED.zip"
       - ".github/workflows/build-v18-zip.yml"
 
 jobs:
@@ -28,11 +28,11 @@ jobs:
         with:
           gradle-version: "8.11.1"
 
-      - name: Extract V18.4 project
+      - name: Extract V18.5 project
         run: |
           rm -rf v18-build
           mkdir v18-build
-          unzip -q Ramadan_Al_Kharaz_V18_4_LOGOS_FIXED.zip -d v18-build
+          unzip -q Ramadan_Al_Kharaz_V18_5_FINAL_APPROVED.zip -d v18-build
 
       - name: Detect Android project
         shell: bash
@@ -45,17 +45,22 @@ jobs:
           fi
 
           PROJECT_DIR=$(dirname "$SETTINGS_FILE")
+
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
           echo "Android project found at: $PROJECT_DIR"
 
-      - name: Build V18.4 APK
+      - name: Build V18.5 APK
         run: |
           gradle -p "$PROJECT_DIR" :app:assembleDebug --stacktrace
 
-      - name: Upload V18.4 APK
+      - name: Find generated APK
+        run: |
+          find "$PROJECT_DIR" -type f -name "*.apk" -print
+
+      - name: Upload V18.5 APK
         uses: actions/upload-artifact@v4
         with:
-          name: Ramadan-Al-Kharaz-V18.4-Logos-Fixed-APK
+          name: Ramadan-Al-Kharaz-V18.5-Final-Approved-APK
           path: |
             ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
