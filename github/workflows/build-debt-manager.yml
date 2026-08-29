@@ -1,0 +1,37 @@
+name: Build Debt Manager APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "Debt_Manager_Standalone_Android_V1.zip"
+      - ".github/workflows/build-debt-manager.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Extract Debt Manager project
+        run: |
+          rm -rf debt-build
+          mkdir debt-build
+          unzip -q Debt_Manager_Standalone_Android_V1.zip -d debt-build
+          echo "=== Extracted files ==="
+          find debt-build -maxdepth 4 -
