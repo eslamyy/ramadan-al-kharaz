@@ -1,10 +1,13 @@
-name: Build V18.7 Search Inventory Warehouse APK
+name: Build V18.9 Stock Warehouse Alerts APK
 
 on:
   workflow_dispatch:
   push:
     branches:
       - main
+    paths:
+      - "Ramadan_Al_Kharaz_V18_9_STOCK_WAREHOUSE_ALERTS.zip"
+      - ".github/workflows/build-v18-zip.yml"
 
 jobs:
   build:
@@ -14,99 +17,33 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Show repository ZIP files
-        run: |
-          echo "===== ZIP FILES ====="
-          find . -type f -iname "*.zip" -print
-          echo "====================="
-
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
 
-      - name: Extract V18.7 project
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Extract V18.9 project
+        shell: bash
         run: |
           rm -rf v18-build
           mkdir -p v18-build
-
-          ZIP_FILE=$(find . -type f -iname "*V18*7*.zip" | head -n 1)
-
-          echo "ZIP FOUND: $ZIP_FILE"
-
-          if [ -z "$ZIP_FILE" ]; then
-            echo "ERROR: ZIP file not found"
-            find . -type f -iname "*.zip" -print
-            exit 1
-          fi
-
-          unzip "$ZIP_FILE" -d v18-build
-
-          echo "===== EXTRACTED FILES ====="
-          find v18-build -maxdepth 4 -print
-          echo "==========================="
+          unzip -q "Ramadan_Al_Kharaz_V18_9_STOCK_WAREHOUSE_ALERTS.zip" -d v18-build
 
       - name: Detect Android project
-        id: detect
+        shell: bash
         run: |
-          PROJECT_DIR=$(find v18-build -type f -name "gradlew" -printf '%h\n' | head -n 1)
+          SETTINGS_FILE=$(find v18-build -type f -name "settings.gradle" -o -name "settings.gradle.kts" | head -n 1)
 
-          if [ -z "$PROJECT_DIR" ]; then
-            PROJECT_DIR=$(find v18-build -type f -name "settings.gradle" -printf '%h\n' | head -n 1)
-          fi
-
-          if [ -z "$PROJECT_DIR" ]; then
-            PROJECT_DIR=$(find v18-build -type f -name "settings.gradle.kts" -printf '%h\n' | head -n 1)
-          fi
-
-          if [ -z "$PROJECT_DIR" ]; then
-            echo "ERROR: Android project not found"
-            find v18-build -maxdepth 5 -print
+          if [ -z "$SETTINGS_FILE" ]; then
+            echo "ERROR: settings.gradle not found"
+            find v18-build -maxdepth 4 -type f | head -100
             exit 1
           fi
 
-          echo "Android project found at: $PROJECT_DIR"
-          echo "project_dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
-
-      - name: Make Gradle executable
-        run: |
-          cd "${{ steps.detect.outputs.project_dir }}"
-
-          if [ -f gradlew ]; then
-            chmod +x gradlew
-          fi
-
-      - name: Build V18.7 APK
-        run: |
-          cd "${{ steps.detect.outputs.project_dir }}"
-
-          if [ -f gradlew ]; then
-            ./gradlew assembleDebug
-          else
-            gradle assembleDebug
-          fi
-
-      - name: Find generated APK
-        run: |
-          APK_FILE=$(find "${{ steps.detect.outputs.project_dir }}" -type f -name "*.apk" | head -n 1)
-
-          if [ -z "$APK_FILE" ]; then
-            echo "ERROR: APK not generated"
-            find "${{ steps.detect.outputs.project_dir }}" -type f
-            exit 1
-          fi
-
-          echo "APK FOUND: $APK_FILE"
-
-          cp "$APK_FILE" Ramadan_Al_Kharaz_V18_7.apk
-
-          ls -lh Ramadan_Al_Kharaz_V18_7.apk
-
-      - name: Upload V18.7 APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: Ramadan-Al-Kharaz-V18.7-APK
-          path: Ramadan_Al_Kharaz_V18_7.apk
-          if-no-files-found: error
-          retention-days: 30
+          PROJECT_DIR=$(
