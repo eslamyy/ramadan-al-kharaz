@@ -73,4 +73,40 @@ jobs:
         run: |
           cd "${{ steps.detect.outputs.project_dir }}"
 
-         
+          if [ -f gradlew ]; then
+            chmod +x gradlew
+          fi
+
+      - name: Build V18.7 APK
+        run: |
+          cd "${{ steps.detect.outputs.project_dir }}"
+
+          if [ -f gradlew ]; then
+            ./gradlew assembleDebug
+          else
+            gradle assembleDebug
+          fi
+
+      - name: Find generated APK
+        run: |
+          APK_FILE=$(find "${{ steps.detect.outputs.project_dir }}" -type f -name "*.apk" | head -n 1)
+
+          if [ -z "$APK_FILE" ]; then
+            echo "ERROR: APK not generated"
+            find "${{ steps.detect.outputs.project_dir }}" -type f
+            exit 1
+          fi
+
+          echo "APK FOUND: $APK_FILE"
+
+          cp "$APK_FILE" Ramadan_Al_Kharaz_V18_7.apk
+
+          ls -lh Ramadan_Al_Kharaz_V18_7.apk
+
+      - name: Upload V18.7 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ramadan-Al-Kharaz-V18.7-APK
+          path: Ramadan_Al_Kharaz_V18_7.apk
+          if-no-files-found: error
+          retention-days: 30
