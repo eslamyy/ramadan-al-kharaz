@@ -11,26 +11,39 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Show repository files
+        run: |
+          echo "===== ALL ZIP FILES ====="
+          find . -type f -iname "*.zip" -print
+          echo "========================="
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v3
-
       - name: Extract V18.7 project
         run: |
           rm -rf v18-build
           mkdir -p v18-build
-          unzip ".github/workflows/Ramadan_Al_Kharaz_V18_7_SEARCH_INVENTORY_WAREHOUSE.zip" -d v18-build
 
-      - name: Show extracted files
-        run: |
-          echo "===== Extracted files ====="
-          find v18-build -maxdepth 3 -type f | head -100
-          echo "==========================="
+          ZIP_FILE=$(find . -type f -iname "*V18*7*.zip" | head -n 1)
+
+          echo "Found ZIP: $ZIP_FILE"
+
+          if [ -z "$ZIP_FILE" ]; then
+            echo "ERROR: ZIP file not found"
+            echo "Available ZIP files:"
+            find . -type f -iname "*.zip" -print
+            exit 1
+          fi
+
+          unzip "$ZIP_FILE" -d v18-build
+
+          echo "===== EXTRACTED ====="
+          find v18-build -maxdepth 3 -print
+          echo "====================="
 
       - name: Detect Android project
         id: detect
@@ -46,9 +59,14 @@ jobs:
           fi
 
           if [ -z "$PROJECT_DIR" ]; then
-            echo "ERROR: Android project not found."
-            find v18-build -maxdepth 4 -type f
+            echo "ERROR: Android project not found"
+            find v18-build -maxdepth 5 -print
             exit 1
           fi
 
-          echo "Android
+          echo "Android project: $PROJECT_DIR"
+          echo "project_dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
+
+      - name: Make Gradle executable
+        run: |
+         
