@@ -1,7 +1,10 @@
-name: Build V18.7 APK
+name: Build V18.7 Search Inventory Warehouse APK
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
   build:
@@ -11,13 +14,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Show repository files
+      - name: Show repository ZIP files
         run: |
-          echo "===== ALL ZIP FILES ====="
+          echo "===== ZIP FILES ====="
           find . -type f -iname "*.zip" -print
-          echo "========================="
+          echo "====================="
 
-      - name: Set up Java
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -30,20 +33,19 @@ jobs:
 
           ZIP_FILE=$(find . -type f -iname "*V18*7*.zip" | head -n 1)
 
-          echo "Found ZIP: $ZIP_FILE"
+          echo "ZIP FOUND: $ZIP_FILE"
 
           if [ -z "$ZIP_FILE" ]; then
             echo "ERROR: ZIP file not found"
-            echo "Available ZIP files:"
             find . -type f -iname "*.zip" -print
             exit 1
           fi
 
           unzip "$ZIP_FILE" -d v18-build
 
-          echo "===== EXTRACTED ====="
-          find v18-build -maxdepth 3 -print
-          echo "====================="
+          echo "===== EXTRACTED FILES ====="
+          find v18-build -maxdepth 4 -print
+          echo "==========================="
 
       - name: Detect Android project
         id: detect
@@ -64,9 +66,11 @@ jobs:
             exit 1
           fi
 
-          echo "Android project: $PROJECT_DIR"
+          echo "Android project found at: $PROJECT_DIR"
           echo "project_dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
 
       - name: Make Gradle executable
         run: |
+          cd "${{ steps.detect.outputs.project_dir }}"
+
          
