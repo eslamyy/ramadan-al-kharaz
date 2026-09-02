@@ -29,21 +29,36 @@ jobs:
           gradle-version: "8.11.1"
 
       - name: Extract V18.9 project
-        shell: bash
         run: |
           rm -rf v18-build
           mkdir -p v18-build
-          unzip -q "Ramadan_Al_Kharaz_V18_9_STOCK_WAREHOUSE_ALERTS.zip" -d v18-build
+          unzip -q Ramadan_Al_Kharaz_V18_9_STOCK_WAREHOUSE_ALERTS.zip -d v18-build
 
       - name: Detect Android project
-        shell: bash
         run: |
-          SETTINGS_FILE=$(find v18-build -type f -name "settings.gradle" -o -name "settings.gradle.kts" | head -n 1)
+          SETTINGS_FILE=$(find v18-build -type f -name "settings.gradle" | head -n 1)
 
           if [ -z "$SETTINGS_FILE" ]; then
             echo "ERROR: settings.gradle not found"
-            find v18-build -maxdepth 4 -type f | head -100
+            find v18-build -maxdepth 5 -type f
             exit 1
           fi
 
-          PROJECT_DIR=$(
+          PROJECT_DIR=$(dirname "$SETTINGS_FILE")
+          echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
+          echo "Project found: $PROJECT_DIR"
+
+      - name: Build V18.9 APK
+        run: |
+          gradle -p "$PROJECT_DIR" :app:assembleDebug --stacktrace
+
+      - name: Find generated APK
+        run: |
+          find "$PROJECT_DIR" -type f -name "*.apk" -print
+
+      - name: Upload V18.9 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ramadan-Al-Kharaz-V18.9-Stock-Alerts-APK
+          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
