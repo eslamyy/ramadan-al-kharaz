@@ -22,3 +22,76 @@ jobs:
         shell: bash
         run: |
           set -e
+          ZIP_FILE=$(find . -type f \( -iname "*V18_11*.zip" -o -iname "*V18.11*.zip" -o -iname "*V18-11*.zip" \) | head -n 1)
+
+          if [ -z "$ZIP_FILE" ]; then
+            echo "V18.11 ZIP not found"
+            echo "ZIP files available:"
+            find . -type f -iname "*.zip" -print
+            exit 1
+          fi
+
+          echo "Found: $ZIP_FILE"
+          echo "zip=$ZIP_FILE" >> "$GITHUB_OUTPUT"
+
+      - name: Extract project
+        shell: bash
+        run: |
+          set -e
+          rm -rf v18_11_project
+          mkdir v18_11_project
+          unzip -q "${{ steps.findzip.outputs.zip }}" -d v18_11_project
+
+      - name: Locate Android project
+        id: project
+        shell: bash
+        run: |
+          set -e
+          SETTINGS=$(find v18_11_project -type f \( -name "settings.gradle" -o -name "settings.gradle.kts" \) | head -n 1)
+
+          if [ -z "$SETTINGS" ]; then
+            echo "Android project not found"
+            exit 1
+          fi
+
+          PROJECT_DIR=$(dirname "$SETTINGS")
+          echo "Project: $PROJECT_DIR"
+          echo "dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build APK
+        shell: bash
+        working-directory: ${{ steps.project.outputs.dir }}
+        run: |
+          set -e
+
+          if [ -f gradlew ]; then
+            chmod +x gradlew
+            ./gradlew clean assembleDebug
+          else
+            gradle clean assembleDebug
+          fi
+
+      - name: Prepare V18.11 APK
+        shell: bash
+        run: |
+          set -e
+          mkdir -p final-apk
+
+          APK=$(find "${{ steps.project.outputs.dir }}" -type f -name "*.apk" -path "*/build/outputs/apk/*" | head -n 1)
+
+          if [ -z "$APK" ]; then
+            echo "APK not found"
+            exit 1
+          fi
+
+          cp "$APK" "final-apk/Ramadan-Al-Kharaz-V18.11.apk"
+
+      - name: Upload V18.11 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ramadan-Al-Kharaz-V18.11-APK
+          path: final-apk/Ramadan-Al-Kharaz-V18.11.apk
+          if-no-files-found: error
