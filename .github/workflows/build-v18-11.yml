@@ -74,7 +74,7 @@ jobs:
           echo "Android project found at: $PROJECT_DIR"
           echo "dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
 
-      - name: Setup Gradle
+      - name: Setup Gradle 8.9
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
@@ -82,8 +82,37 @@ jobs:
       - name: Setup Android SDK
         shell: bash
         run: |
-          yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager \
+          set -e
+
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT}}"
+
+          if [ -z "$SDK_ROOT" ]; then
+            echo "ERROR: Android SDK path not found"
+            exit 1
+          fi
+
+          echo "Android SDK path: $SDK_ROOT"
+
+          SDKMANAGER=$(find "$SDK_ROOT" \
+            -type f \
+            -name sdkmanager \
+            | head -n 1)
+
+          if [ -z "$SDKMANAGER" ]; then
+            echo "ERROR: sdkmanager not found"
+            find "$SDK_ROOT" -maxdepth 6 -type f | head -100
+            exit 1
+          fi
+
+          SDKMANAGER_DIR=$(dirname "$SDKMANAGER")
+
+          echo "$SDKMANAGER_DIR" >> "$GITHUB_PATH"
+          echo "$SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
+          echo "$SDK_ROOT/emulator" >> "$GITHUB_PATH"
+
+          "$SDKMANAGER" --licenses > /dev/null || true
+
+          "$SDKMANAGER" \
             "platform-tools" \
             "platforms;android-35" \
             "build-tools;35.0.0"
@@ -108,7 +137,8 @@ jobs:
           set -e
 
           APK=$(find extracted -type f \
-            -path "*/build/outputs/apk/debug/*.apk" | head -n 1)
+            -path "*/build/outputs/apk/debug/*.apk" \
+            | head -n 1)
 
           if [ -z "$APK" ]; then
             echo "ERROR: APK file was not created"
@@ -125,6 +155,7 @@ jobs:
           set -e
 
           mkdir -p final-apk
+
           cp "${{ steps.apk.outputs.path }}" \
             "final-apk/Ramadan-Al-Kharaz-V18.11.apk"
 
