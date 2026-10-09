@@ -1,0 +1,81 @@
+name: Build Ramadan Al Kharaz New Version
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download repository
+        uses: actions/checkout@v4
+
+      - name: Find project ZIP
+        run: |
+          ZIP_FILE=$(find . -maxdepth 2 -type f -name "Ramadan-Al-Kharaz-Center-FULL-INVOICE-SHARE.zip" | head -n 1)
+
+          if [ -z "$ZIP_FILE" ]; then
+            echo "Project ZIP not found"
+            find . -maxdepth 2 -type f
+            exit 1
+          fi
+
+          echo "ZIP_FILE=$ZIP_FILE" >> "$GITHUB_ENV"
+
+      - name: Extract project
+        run: |
+          mkdir -p extracted
+          unzip -q "$ZIP_FILE" -d extracted
+
+          PROJECT_DIR=$(find extracted -type f -name "settings.gradle*" -printf '%h\n' | head -n 1)
+
+          if [ -z "$PROJECT_DIR" ]; then
+            echo "Android project not found"
+            find extracted -maxdepth 4 -type f
+            exit 1
+          fi
+
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager "platform-tools" \
+                     "platforms;android-35" \
+                     "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.9
+
+      - name: Build APK
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: |
+          gradle assembleDebug --stacktrace
+
+      - name: Find APK
+        run: |
+          APK_FILE=$(find "$PROJECT_DIR" -type f -name "*.apk" | head -n 1)
+
+          if [ -z "$APK_FILE" ]; then
+            echo "APK not found"
+            exit 1
+          fi
+
+          echo "APK_FILE=$APK_FILE" >> "$GITHUB_ENV"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ramadan-Al-Kharaz-FULL-INVOICE-SHARE-APK
+          path: ${{ env.APK_FILE }}
