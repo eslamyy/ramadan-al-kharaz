@@ -2,10 +2,6 @@ name: Build Ramadan Al Kharaz V19.4
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - "*.zip"
-      - ".github/workflows/build-new-version.yml"
 
 jobs:
   build:
@@ -15,45 +11,30 @@ jobs:
       - name: Download repository
         uses: actions/checkout@v4
 
-      - name: Find project ZIP
-        shell: bash
+      - name: Find ZIP file
         run: |
-          set -e
-
-          ZIP_FILE=$(find . -maxdepth 1 -type f -iname "*.zip" | head -n 1)
+          ZIP_FILE=$(find . -maxdepth 1 -type f -name "*.zip" | head -n 1)
 
           if [ -z "$ZIP_FILE" ]; then
-            echo "لم يتم العثور على ملف ZIP"
+            echo "ZIP file not found"
             exit 1
           fi
-
-          echo "تم العثور على الملف:"
-          echo "$ZIP_FILE"
 
           echo "ZIP_FILE=$ZIP_FILE" >> "$GITHUB_ENV"
 
       - name: Extract project
-        shell: bash
         run: |
-          set -e
-
           rm -rf extracted
-          mkdir -p extracted
+          mkdir extracted
 
           unzip -q "$ZIP_FILE" -d extracted
 
-          PROJECT_DIR=$(find extracted -type f -name "settings.gradle" -o -name "settings.gradle.kts" | head -n 1)
+          PROJECT_DIR=$(find extracted -type f -name "settings.gradle" | head -n 1 | xargs dirname)
 
           if [ -z "$PROJECT_DIR" ]; then
-            echo "لم يتم العثور على مشروع Android"
-            find extracted -maxdepth 4 -type f
+            echo "Android project not found"
             exit 1
           fi
-
-          PROJECT_DIR=$(dirname "$PROJECT_DIR")
-
-          echo "مجلد المشروع:"
-          echo "$PROJECT_DIR"
 
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
 
@@ -63,33 +44,27 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-            - name: Prepare Android SDK
-        shell: bash
+      - name: Prepare Android SDK
         run: |
-          set -e
-
           SDK_PATH="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
 
           echo "ANDROID_HOME=$SDK_PATH" >> "$GITHUB_ENV"
           echo "ANDROID_SDK_ROOT=$SDK_PATH" >> "$GITHUB_ENV"
 
-          echo "مسار Android SDK:"
-          echo "$SDK_PATH"
-
           SDKMANAGER=$(find "$SDK_PATH" -type f -name "sdkmanager" | head -n 1)
 
           if [ -z "$SDKMANAGER" ]; then
-            echo "لم يتم العثور على sdkmanager"
+            echo "sdkmanager not found"
             exit 1
           fi
 
-          echo "تم العثور على sdkmanager:"
-          echo "$SDKMANAGER"
-
           chmod +x "$SDKMANAGER"
 
-          yes | "$SDKMANAGER" --licenses >/dev/null || true
-
+          yes | "$SDKMANAGER" --licenses || true
           "$SDKMANAGER" "platform-tools"
           "$SDKMANAGER" "platforms;android-35"
           "$SDKMANAGER" "build-tools;35.0.0"
+
+      - name: Build APK
+        run: |
+          cd "$
