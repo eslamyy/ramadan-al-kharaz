@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Download repository
@@ -20,35 +20,40 @@ jobs:
         run: |
           set -e
 
-          ZIP_FILE="$(find . -maxdepth 1 -type f -iname '*.zip' | head -n 1)"
+          ZIP_FILE=$(find . -maxdepth 1 -type f -iname "*.zip" | head -n 1)
 
           if [ -z "$ZIP_FILE" ]; then
             echo "لم يتم العثور على ملف ZIP"
             exit 1
           fi
 
-          echo "Found project ZIP: $ZIP_FILE"
+          echo "تم العثور على الملف:"
+          echo "$ZIP_FILE"
+
           echo "ZIP_FILE=$ZIP_FILE" >> "$GITHUB_ENV"
 
       - name: Extract project
         shell: bash
         run: |
           set -e
+
           rm -rf extracted
           mkdir -p extracted
+
           unzip -q "$ZIP_FILE" -d extracted
 
-          if [ -d "extracted/Ramadan-Al-Kharaz-Center" ]; then
-            PROJECT_DIR="extracted/Ramadan-Al-Kharaz-Center"
-          else
-            PROJECT_DIR="$(find extracted -name settings.gradle -o -name settings.gradle.kts | head -n 1 | xargs dirname)"
-          fi
+          PROJECT_DIR=$(find extracted -type f -name "settings.gradle" -o -name "settings.gradle.kts" | head -n 1)
 
-          if [ -z "$PROJECT_DIR" ] || [ ! -f "$PROJECT_DIR/settings.gradle" ]; then
-            echo "لم يتم العثور على مشروع Android صحيح"
-            find extracted -maxdepth 3 -type f
+          if [ -z "$PROJECT_DIR" ]; then
+            echo "لم يتم العثور على مشروع Android"
+            find extracted -maxdepth 4 -type f
             exit 1
           fi
+
+          PROJECT_DIR=$(dirname "$PROJECT_DIR")
+
+          echo "مجلد المشروع:"
+          echo "$PROJECT_DIR"
 
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
 
@@ -58,44 +63,10 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android SDK
-        shell: bash
-        run: |
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
-
-      - name: Build APK
+      - name: Prepare Android SDK
         shell: bash
         run: |
           set -e
-          cd "$PROJECT_DIR"
 
-          chmod +x gradlew 2>/dev/null || true
-
-          if [ -f "./gradlew" ]; then
-            ./gradlew clean assembleDebug --no-daemon
-          else
-            gradle clean assembleDebug --no-daemon
-          fi
-
-      - name: Find APK
-        shell: bash
-        run: |
-          APK_FILE="$(find "$PROJECT_DIR" -type f -name '*-debug.apk' | head -n 1)"
-
-          if [ -z "$APK_FILE" ]; then
-            echo "لم يتم العثور على APK"
-            exit 1
-          fi
-
-          echo "APK_FILE=$APK_FILE" >> "$GITHUB_ENV"
-          echo "تم العثور على APK: $APK_FILE"
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: Ramadan-Al-Kharaz-V19.4-APK
-          path: ${{ env.APK_FILE }}
+          if [ -n "$ANDROID_HOME" ]; then
+            SDK_PATH
