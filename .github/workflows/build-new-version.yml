@@ -8,33 +8,53 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - name: Download repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Find ZIP file
+      - name: Find project ZIP
+        shell: bash
         run: |
-          ZIP_FILE=$(find . -maxdepth 1 -type f -name "*.zip" | head -n 1)
+          set -e
+
+          ZIP_FILE=$(find . -maxdepth 1 -type f -iname "*V19.4*.zip" | head -n 1)
 
           if [ -z "$ZIP_FILE" ]; then
-            echo "ZIP file not found"
+            ZIP_FILE=$(find . -maxdepth 1 -type f -iname "*.zip" | head -n 1)
+          fi
+
+          if [ -z "$ZIP_FILE" ]; then
+            echo "لم يتم العثور على ملف ZIP"
             exit 1
           fi
+
+          echo "تم العثور على:"
+          echo "$ZIP_FILE"
 
           echo "ZIP_FILE=$ZIP_FILE" >> "$GITHUB_ENV"
 
       - name: Extract project
+        shell: bash
         run: |
+          set -e
+
           rm -rf extracted
-          mkdir extracted
+          mkdir -p extracted
 
           unzip -q "$ZIP_FILE" -d extracted
 
-          PROJECT_DIR=$(find extracted -type f -name "settings.gradle" | head -n 1 | xargs dirname)
+          PROJECT_DIR=$(find extracted -type f \
+            -name "settings.gradle" \
+            -o -name "settings.gradle.kts" \
+          | head -n 1 | xargs -r dirname)
 
           if [ -z "$PROJECT_DIR" ]; then
-            echo "Android project not found"
+            echo "لم يتم العثور على مشروع Android"
+            find extracted -maxdepth 4 -type f
             exit 1
           fi
+
+          echo "مجلد المشروع:"
+          echo "$PROJECT_DIR"
 
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
 
@@ -44,8 +64,16 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
       - name: Prepare Android SDK
+        shell: bash
         run: |
+          set -e
+
           SDK_PATH="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
 
           echo "ANDROID_HOME=$SDK_PATH" >> "$GITHUB_ENV"
@@ -54,23 +82,54 @@ jobs:
           SDKMANAGER=$(find "$SDK_PATH" -type f -name "sdkmanager" | head -n 1)
 
           if [ -z "$SDKMANAGER" ]; then
-            echo "sdkmanager not found"
+            echo "لم يتم العثور على sdkmanager"
             exit 1
           fi
+
+          echo "SDK Manager:"
+          echo "$SDKMANAGER"
+
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+
+          "$SDKMANAGER" "platform-tools"
+          "$SDKMANAGER" "platforms;android-35"
+          "$SDKMANAGER" "build-tools;35.0.0"
+
+      - name: Build APK
+        shell: bash
+        run: |
+          set -e
+
+          cd "$PROJECT_DIR"
+
+          echo "ملفات المشروع:"
+          ls -la
+
+          if [ -f "gradlew" ]; then
+            ./gradlew clean assembleDebug --no-daemon
+          else
+            gradle clean assembleDebug --no-daemon
+          fi
+
       - name: Find APK
         shell: bash
         run: |
           set -e
 
-          APK_FILE=$(find . -type f -name "*.apk" | head -n 1)
+          APK_FILE=$(find "$PROJECT_DIR" \
+            -type f \
+            -name "*.apk" \
+            -not -path "*/build/intermediates/*" \
+            | head -n 1)
 
           if [ -z "$APK_FILE" ]; then
-            echo "APK not found"
-            find . -type f | grep apk || true
+            echo "لم يتم العثور على APK"
+            echo "ملفات المشروع:"
+            find "$PROJECT_DIR" -type f | tail -100
             exit 1
           fi
 
-          echo "Found APK:"
+          echo "تم العثور على APK:"
           echo "$APK_FILE"
 
           echo "APK_FILE=$APK_FILE" >> "$GITHUB_ENV"
@@ -80,3 +139,4 @@ jobs:
         with:
           name: Ramadan-Al-Kharaz-V19.4-APK
           path: ${{ env.APK_FILE }}
+          if-no-files-found: error
