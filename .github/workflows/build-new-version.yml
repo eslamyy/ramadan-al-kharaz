@@ -57,14 +57,3 @@ jobs:
             echo "sdkmanager not found"
             exit 1
           fi
-
-          chmod +x "$SDKMANAGER"
-
-          yes | "$SDKMANAGER" --licenses || true
-          "$SDKMANAGER" "platform-tools"
-          "$SDKMANAGER" "platforms;android-35"
-          "$SDKMANAGER" "build-tools;35.0.0"
-
-      - name: Build APK
-        run: |
-          cd "$
