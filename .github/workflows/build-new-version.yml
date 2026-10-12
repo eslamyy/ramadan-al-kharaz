@@ -1,4 +1,4 @@
-name: Build Ramadan Al Kharaz APK
+name: Build Ramadan Al Kharaz V19.1
 
 on:
   workflow_dispatch:
@@ -8,27 +8,30 @@ permissions:
 
 jobs:
   build:
-    name: Build APK
+    name: Build APK V19.1
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Find project ZIP
+      - name: Find V19 project ZIP
         shell: bash
         run: |
-          ZIP_FILE=$(find . -type f -name 'Ramadan-Al-Kharaz-Center-FULL-INVOICE-SHARE.zip' | head -n 1)
+          ZIP_FILE=$(find . -type f -name '*.zip' \
+            | grep -Ei 'V19|19[._-]?1' \
+            | head -n 1)
 
           if [ -z "$ZIP_FILE" ]; then
-            echo "Project ZIP not found"
-            echo "ZIP files available:"
+            echo "V19 project ZIP was not found"
+            echo "Available ZIP files:"
             find . -type f -name '*.zip'
             exit 1
           fi
 
-          echo "Found project ZIP:"
+          echo "Selected project ZIP:"
           echo "$ZIP_FILE"
+
           echo "ZIP_FILE=$ZIP_FILE" >> "$GITHUB_ENV"
 
       - name: Extract project
@@ -46,13 +49,14 @@ jobs:
           fi
 
           if [ -z "$PROJECT_DIR" ]; then
-            echo "Android Gradle project not found"
+            echo "Android Gradle project was not found"
             find extracted -maxdepth 5 -type f
             exit 1
           fi
 
-          echo "Project directory:"
+          echo "Android project directory:"
           echo "$PROJECT_DIR"
+
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
 
       - name: Set up Java 17
@@ -72,7 +76,7 @@ jobs:
           fi
 
           if [ -z "$SDK_ROOT" ] || [ ! -d "$SDK_ROOT" ]; then
-            echo "Android SDK directory not found"
+            echo "Android SDK was not found"
             exit 1
           fi
 
@@ -90,7 +94,7 @@ jobs:
           fi
 
           if [ -z "$SDKMANAGER" ] || [ ! -f "$SDKMANAGER" ]; then
-            echo "sdkmanager not found"
+            echo "sdkmanager was not found"
             find "$SDK_ROOT" -type f -name 'sdkmanager' || true
             exit 1
           fi
@@ -110,7 +114,7 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Check project files
+      - name: Check project
         working-directory: ${{ env.PROJECT_DIR }}
         shell: bash
         run: |
@@ -118,12 +122,12 @@ jobs:
           ls -la
 
           if [ ! -f "settings.gradle" ] && [ ! -f "settings.gradle.kts" ]; then
-            echo "settings.gradle file not found"
+            echo "settings.gradle was not found"
             exit 1
           fi
 
           if [ ! -f "build.gradle" ] && [ ! -f "build.gradle.kts" ]; then
-            echo "build.gradle file not found"
+            echo "build.gradle was not found"
             exit 1
           fi
 
@@ -133,7 +137,7 @@ jobs:
         run: |
           gradle clean assembleDebug --stacktrace --no-daemon
 
-      - name: Find APK
+      - name: Find generated APK
         shell: bash
         run: |
           APK_FILE=$(find "$PROJECT_DIR" -type f -name '*.apk' | head -n 1)
@@ -144,13 +148,14 @@ jobs:
             exit 1
           fi
 
-          echo "APK found:"
+          echo "Generated APK:"
           echo "$APK_FILE"
+
           echo "APK_FILE=$APK_FILE" >> "$GITHUB_ENV"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Ramadan-Al-Kharaz-FULL-INVOICE-SHARE-APK
+          name: Ramadan-Al-Kharaz-V19.1-FINAL-APK
           path: ${{ env.APK_FILE }}
           if-no-files-found: error
