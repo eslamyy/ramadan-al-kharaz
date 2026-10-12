@@ -1,59 +1,54 @@
-name: Build Ramadan Al Kharaz V19.2
+name: Build Ramadan Al Kharaz V19.4
 
 on:
   workflow_dispatch:
-
-permissions:
-  contents: read
+  push:
+    paths:
+      - "*.zip"
+      - ".github/workflows/build-new-version.yml"
 
 jobs:
   build:
-    name: Build APK V19.2
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Download repository
         uses: actions/checkout@v4
 
-      - name: Find V19.2 ZIP
+      - name: Find project ZIP
         shell: bash
         run: |
-          ZIP_FILE=$(find . -type f -name '*.zip' | grep -Ei 'V19[._-]?2|19[._-]?2' | head -n 1)
+          set -e
+
+          ZIP_FILE="$(find . -maxdepth 1 -type f -iname '*.zip' | head -n 1)"
 
           if [ -z "$ZIP_FILE" ]; then
-            echo "V19.2 ZIP file not found"
-            echo "Available ZIP files:"
-            find . -type f -name '*.zip'
+            echo "لم يتم العثور على ملف ZIP"
             exit 1
           fi
 
-          echo "Selected ZIP:"
-          echo "$ZIP_FILE"
-
+          echo "Found project ZIP: $ZIP_FILE"
           echo "ZIP_FILE=$ZIP_FILE" >> "$GITHUB_ENV"
 
-      - name: Extract Android project
+      - name: Extract project
         shell: bash
         run: |
+          set -e
           rm -rf extracted
           mkdir -p extracted
-
           unzip -q "$ZIP_FILE" -d extracted
 
-          PROJECT_DIR=$(find extracted -type f -name 'settings.gradle' -printf '%h\n' | head -n 1)
-
-          if [ -z "$PROJECT_DIR" ]; then
-            PROJECT_DIR=$(find extracted -type f -name 'settings.gradle.kts' -printf '%h\n' | head -n 1)
+          if [ -d "extracted/Ramadan-Al-Kharaz-Center" ]; then
+            PROJECT_DIR="extracted/Ramadan-Al-Kharaz-Center"
+          else
+            PROJECT_DIR="$(find extracted -name settings.gradle -o -name settings.gradle.kts | head -n 1 | xargs dirname)"
           fi
 
-          if [ -z "$PROJECT_DIR" ]; then
-            echo "Android project was not found"
-            find extracted -maxdepth 5 -type f
+          if [ -z "$PROJECT_DIR" ] || [ ! -f "$PROJECT_DIR/settings.gradle" ]; then
+            echo "لم يتم العثور على مشروع Android صحيح"
+            find extracted -maxdepth 3 -type f
             exit 1
           fi
-
-          echo "Project directory:"
-          echo "$PROJECT_DIR"
 
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
 
@@ -61,96 +56,46 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
-          cache: gradle
+          java-version: "17"
 
       - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK
         shell: bash
         run: |
-          SDK_ROOT="/usr/local/lib/android/sdk"
-
-          if [ ! -d "$SDK_ROOT" ]; then
-            SDK_ROOT="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
-          fi
-
-          if [ -z "$SDK_ROOT" ] || [ ! -d "$SDK_ROOT" ]; then
-            echo "Android SDK was not found"
-            exit 1
-          fi
-
-          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
-          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
-
-          echo "$SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
-          echo "$SDK_ROOT/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
-          echo "$SDK_ROOT/emulator" >> "$GITHUB_PATH"
-
-          SDKMANAGER="$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
-
-          if [ ! -f "$SDKMANAGER" ]; then
-            SDKMANAGER=$(find "$SDK_ROOT/cmdline-tools" -type f -name 'sdkmanager' | head -n 1)
-          fi
-
-          if [ -z "$SDKMANAGER" ] || [ ! -f "$SDKMANAGER" ]; then
-            echo "sdkmanager was not found"
-            find "$SDK_ROOT" -type f -name 'sdkmanager' || true
-            exit 1
-          fi
-
-          yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
-
-          "$SDKMANAGER" \
-            'platform-tools' \
-            'platforms;android-35' \
-            'build-tools;35.0.0'
-
-      - name: Set up Gradle 8.9
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.9'
-
-      - name: Check Android project
-        working-directory: ${{ env.PROJECT_DIR }}
-        shell: bash
-        run: |
-          echo "Android project files:"
-          ls -la
-
-          if [ ! -f "settings.gradle" ] && [ ! -f "settings.gradle.kts" ]; then
-            echo "settings.gradle was not found"
-            exit 1
-          fi
-
-          if [ ! -f "build.gradle" ] && [ ! -f "build.gradle.kts" ]; then
-            echo "build.gradle was not found"
-            exit 1
-          fi
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Build APK
-        working-directory: ${{ env.PROJECT_DIR }}
         shell: bash
         run: |
-          gradle clean assembleDebug --stacktrace --no-daemon
+          set -e
+          cd "$PROJECT_DIR"
+
+          chmod +x gradlew 2>/dev/null || true
+
+          if [ -f "./gradlew" ]; then
+            ./gradlew clean assembleDebug --no-daemon
+          else
+            gradle clean assembleDebug --no-daemon
+          fi
 
       - name: Find APK
         shell: bash
         run: |
-          APK_FILE=$(find "$PROJECT_DIR" -type f -name '*.apk' | head -n 1)
+          APK_FILE="$(find "$PROJECT_DIR" -type f -name '*-debug.apk' | head -n 1)"
 
           if [ -z "$APK_FILE" ]; then
-            echo "APK was not generated"
-            find "$PROJECT_DIR" -type f | tail -100
+            echo "لم يتم العثور على APK"
             exit 1
           fi
 
-          echo "APK found:"
-          echo "$APK_FILE"
-
           echo "APK_FILE=$APK_FILE" >> "$GITHUB_ENV"
+          echo "تم العثور على APK: $APK_FILE"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Ramadan-Al-Kharaz-V19.2-FINAL-APK
+          name: Ramadan-Al-Kharaz-V19.4-APK
           path: ${{ env.APK_FILE }}
-          if-no-files-found: error
